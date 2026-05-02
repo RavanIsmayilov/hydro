@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Su Monitorinq Sistemi</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --blue: #3b82f6;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --green: #22c55e;
+  --orange: #f97316;
+  --sidebar-w: 240px;
+  --navbar-h: 56px;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  font-size: 13px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #bfdbfe;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 10px 8px;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  margin-bottom: 2px;
+  text-decoration: none;
+  position: relative;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nav-item:hover { background: #273549; color: var(--text); }
+.nav-item.active { background: var(--blue); color: #fff; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  line-height: 16px;
+}
+
+.nav-item.active .nav-badge { background: rgba(255,255,255,0.3); }
+
+.sidebar-status {
+  padding: 14px 14px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+}
+
+.sidebar-status-title {
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* MAIN WRAPPER */
+.main-wrapper {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* NAVBAR */
+.navbar {
+  height: var(--navbar-h);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.navbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #bfdbfe;
+  flex: 1;
+}
+
+.weather-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #273549;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #93c5fd;
+}
+
+.notif-btn {
+  position: relative;
+  width: 36px; height: 36px;
+  background: #273549;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.notif-btn .badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.admin-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #273549;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.admin-avatar {
+  width: 24px; height: 24px;
+  background: var(--blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* PAGE */
+.page { display: none; }
+.page.active { display: flex; flex-direction: column; }
+
+/* CONTENT */
+.content {
+  padding: 18px 20px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.card-dropdown {
+  background: #273549;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ROWS */
+.row { display: grid; gap: 16px; }
+.row-1 { grid-template-columns: 1fr 1fr 360px; }
+.row-2 { grid-template-columns: 1fr 1fr 360px; }
+.row-3 { grid-template-columns: 1fr 320px; }
+
+/* MAP */
+.map-wrap { height: 320px; position: relative; }
+.map-container { width: 100%; height: 100%; }
+
+.map-legend {
+  position: absolute;
+  top: 10px; left: 10px;
+  z-index: 1000;
+  background: rgba(15,23,42,0.88);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.legend-item { display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+.map-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid var(--border);
+}
+
+.map-stat {
+  padding: 10px 12px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+.map-stat:last-child { border-right: none; }
+.map-stat-val { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.map-stat-label { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* ALERTS */
+.panel-body { padding: 4px 0; }
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e2d3e;
+}
+
+.alert-icon {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+
+.alert-icon.red { background: rgba(239,68,68,0.15); color: var(--red); }
+.alert-icon.orange { background: rgba(249,115,22,0.15); color: var(--orange); }
+.alert-icon.yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.alert-icon.blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+.alert-icon.green { background: rgba(34,197,94,0.15); color: var(--green); }
+
+.alert-body { flex: 1; min-width: 0; }
+.alert-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.alert-title.red { color: var(--red); }
+.alert-title.orange { color: var(--orange); }
+.alert-title.yellow { color: var(--yellow); }
+.alert-title.blue { color: #60a5fa; }
+.alert-title.green { color: var(--green); }
+.alert-sub { font-size: 11px; color: var(--text-muted); }
+.alert-time { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; margin-top: 1px; }
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #1e2d3e;
+}
+
+.notif-check {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.15);
+  color: var(--green);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+
+.notif-text { flex: 1; font-size: 11.5px; color: var(--text-muted); }
+.notif-time { font-size: 10.5px; color: #475569; white-space: nowrap; }
+
+.card-footer {
+  padding: 9px 14px;
+  text-align: right;
+}
+
+.link-more {
+  color: var(--blue);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* CHART */
+.chart-wrap { padding: 14px 16px 16px; position: relative; height: 250px; }
+.chart-wrap canvas { height: 100% !important; }
+
+/* FORECAST */
+.forecast-warn { padding: 14px; }
+
+.warn-card {
+  background: rgba(249,115,22,0.1);
+  border: 1px solid rgba(249,115,22,0.3);
+  border-radius: 9px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.warn-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 8px;
+}
+
+.warn-text { font-size: 12px; color: #cbd5e1; line-height: 1.6; }
+
+.warn-rec {
+  background: rgba(51,65,85,0.5);
+  border-left: 3px solid var(--blue);
+  padding: 10px 12px;
+  border-radius: 0 7px 7px 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.warn-rec strong { color: var(--text); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+thead th {
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: #162032;
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e2d3e;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #1a2840; }
+
+.sensor-id { font-weight: 700; color: #93c5fd; font-family: monospace; font-size: 12px; }
+.sensor-loc { color: var(--text-muted); }
+
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+
+.progress-bar-bg {
+  width: 80px;
+  height: 6px;
+  background: #334155;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill { height: 100%; border-radius: 3px; }
+.pb-red { background: var(--red); }
+.pb-yellow { background: var(--yellow); }
+.pb-blue { background: var(--blue); }
+.pb-green { background: var(--green); }
+
+.pct-red { color: var(--red); font-weight: 600; }
+.pct-yellow { color: var(--yellow); font-weight: 600; }
+.pct-blue { color: #60a5fa; font-weight: 600; }
+.pct-green { color: var(--green); font-weight: 600; }
+
+.risk-badge {
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.risk-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.risk-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.risk-blue { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.risk-green { background: rgba(34,197,94,0.15); color: var(--green); }
+.risk-orange { background: rgba(249,115,22,0.15); color: var(--orange); }
+
+.status-online {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--green); font-size: 11.5px; font-weight: 500;
+}
+.status-offline {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--red); font-size: 11.5px; font-weight: 500;
+}
+.status-online .dot { width: 7px; height: 7px; }
+.status-offline .dot { width: 7px; height: 7px; background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+/* WEATHER */
+.weather-body { padding: 16px; }
+.weather-main { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.weather-icon-big {
+  width: 56px; height: 56px;
+  background: rgba(59,130,246,0.12);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: #60a5fa;
+}
+.weather-temp { font-size: 32px; font-weight: 700; color: #e2e8f0; line-height: 1; }
+.weather-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.weather-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.weather-stat { background: #162032; border-radius: 7px; padding: 9px 10px; text-align: center; }
+.weather-stat-val { font-size: 14px; font-weight: 700; color: #93c5fd; }
+.weather-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* QUICK ACTIONS */
+.quick-body { padding: 14px; }
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.quick-btn {
+  background: #162032;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 13px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-btn:hover { background: #1e3050; color: var(--text); border-color: var(--blue); }
+.quick-btn svg { color: #60a5fa; }
+
+/* STAT CARDS */
+.stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.stat-card-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-card-val { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.stat-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.stat-card-trend { font-size: 11px; font-weight: 600; margin-top: 6px; }
+.trend-up { color: var(--red); }
+.trend-down { color: var(--green); }
+
+/* FULL MAP PAGE */
+.full-map-wrap { height: calc(100vh - 56px - 60px); position: relative; min-height: 500px; }
+.full-map-wrap .map-container { width: 100%; height: 100%; }
+
+/* ANALYTICS GRID */
+.analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.analytics-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* SETTINGS */
+.settings-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+.settings-menu { display: flex; flex-direction: column; gap: 4px; }
+.settings-menu-item {
+  padding: 10px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+  display: flex; align-items: center; gap: 10px;
+  border: none; background: none; font-family: inherit; text-align: left; width: 100%;
+}
+.settings-menu-item:hover { background: #273549; color: var(--text); }
+.settings-menu-item.active { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-input {
+  width: 100%;
+  background: #162032;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: var(--blue); }
+.form-select {
+  width: 100%;
+  background: #162032;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #1e2d3e;
+}
+.toggle-info {}
+.toggle-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle-desc { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+.toggle {
+  position: relative;
+  width: 42px; height: 22px;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #334155;
+  border-radius: 22px;
+  transition: 0.2s;
+}
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px; width: 16px;
+  left: 3px; bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: var(--blue); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+.btn {
+  padding: 9px 18px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+}
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* REPORTS */
+.report-list { padding: 6px 0; }
+.report-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e2d3e;
+  transition: background 0.12s;
+}
+.report-item:hover { background: #1a2840; }
+.report-icon {
+  width: 38px; height: 38px;
+  background: rgba(59,130,246,0.12);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+.report-body { flex: 1; }
+.report-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.report-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.report-actions { display: flex; gap: 8px; }
+.icon-btn {
+  width: 30px; height: 30px;
+  background: #273549;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: #1e3050; color: var(--text); }
+
+/* FORECAST PAGE */
+.forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.forecast-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.forecast-day-card {
+  background: #162032;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.forecast-day-name { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+.forecast-day-icon { font-size: 22px; margin-bottom: 6px; }
+.forecast-day-temp { font-size: 16px; font-weight: 700; color: var(--text); }
+.forecast-day-rain { font-size: 11px; color: #60a5fa; margin-top: 3px; }
+.forecast-day-risk { font-size: 10px; font-weight: 700; margin-top: 6px; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+/* DEVICES */
+.devices-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.device-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+}
+.device-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.device-icon {
+  width: 40px; height: 40px;
+  background: rgba(59,130,246,0.12);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: #60a5fa;
+}
+.device-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.device-type { font-size: 11px; color: var(--text-muted); }
+.device-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.device-stat { background: #162032; border-radius: 7px; padding: 8px; }
+.device-stat-val { font-size: 15px; font-weight: 700; color: #93c5fd; }
+.device-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* PAGE HEADER */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 0;
+}
+.page-header-title { font-size: 18px; font-weight: 700; color: var(--text); }
+.page-header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.page-header-actions { display: flex; gap: 10px; }
+
+/* SENSOR DETAIL */
+.sensor-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #162032;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.filter-btn:hover, .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* LEAFLET OVERRIDES */
+.leaflet-container { background: #0d1b2a !important; }
+.leaflet-control-zoom a {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+.leaflet-dark-tooltip {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #e2e8f0 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  border-radius: 5px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+  font-family: Inter, sans-serif !important;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+/* KANALIZASIYA MAP FULL */
+.full-content { padding: 0; }
+.full-map-card { border-radius: 0; border: none; height: calc(100vh - var(--navbar-h)); }
+.full-map-card .map-container { height: 100%; }
+
+/* SIGNAL FILTER TABS */
+.signal-tabs { display: flex; gap: 0; background: #162032; border-radius: 8px; padding: 3px; }
+.signal-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  border: none; background: none; font-family: inherit;
+}
+.signal-tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+.signal-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e2d3e;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.signal-row:hover { background: #1a2840; }
+.signal-priority {
+  width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0;
+}
+.signal-body { flex: 1; }
+.signal-title { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.signal-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.signal-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.signal-actions { display: flex; gap: 6px; }
+.signal-action-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  background: #273549;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.signal-action-btn:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+.signal-action-btn.resolve { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); color: var(--green); }
+
+/* ANALITIKA STAT ROW */
+.analitika-kpi { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.kpi-val { font-size: 22px; font-weight: 700; }
+.kpi-label { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+.kpi-change { font-size: 10.5px; font-weight: 600; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="rgba(59,130,246,0.15)"/>
+      <path d="M16 5C16 5 8 14 8 19C8 23.4183 11.5817 27 16 27C20.4183 27 24 23.4183 24 19C24 14 16 5 16 5Z" fill="#3b82f6" opacity="0.9"/>
+      <path d="M16 11C16 11 11 17 11 20C11 22.7614 13.2386 25 16 25C18.7614 25 21 22.7614 21 20C21 17 16 11 16 11Z" fill="#93c5fd" opacity="0.6"/>
+    </svg>
+    <span class="sidebar-logo-text">Su Monitorinq<br>Sistemi</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-page="dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Ümumi İcmal
+    </button>
+    <button class="nav-item" data-page="kanalizasiya-map">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+      Kanalizasiya Xəritəsi
+    </button>
+    <button class="nav-item" data-page="hava-risk-map">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17.5 19H9a7 7 0 110-14h.6A6 6 0 0122 10.5 5.5 5.5 0 0117.5 19z"/></svg>
+      Hava Risk Xəritəsi
+    </button>
+    <button class="nav-item" data-page="signals">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Siqnallar
+      <span class="nav-badge">12</span>
+    </button>
+    <button class="nav-item" data-page="notifications">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      Bildirişlər
+    </button>
+    <button class="nav-item" data-page="analytics">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analitika
+    </button>
+    <button class="nav-item" data-page="forecasts">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Proqnozlar
+    </button>
+    <button class="nav-item" data-page="reports">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Hesabatlar
+    </button>
+    <button class="nav-item" data-page="sensors">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Sensorlar
+    </button>
+    <button class="nav-item" data-page="devices">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+      Qurğular
+    </button>
+    <button class="nav-item" data-page="settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Parametrlər
+    </button>
+  </nav>
+
+  <div class="sidebar-status">
+    <div class="sidebar-status-title">Sistem Statusu</div>
+    <div class="status-row" style="color:var(--green);font-weight:600;"><div class="dot"></div>Online</div>
+    <div class="status-row">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4"/></svg>
+      Sensorlar 128/128
+    </div>
+    <div class="status-row">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Son yeniləmə <span id="clock" style="margin-left:4px;color:#cbd5e1;font-weight:600;"></span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrapper">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <span class="navbar-title" id="navbar-title">Su Monitorinq Sistemi</span>
+    <div class="weather-pill">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 110-14c.2 0 .4 0 .6.02A5.99 5.99 0 0122 10.5a5.5 5.5 0 01-4.5 8.5z"/></svg>
+      18°C
+    </div>
+    <div class="notif-btn" onclick="navigateTo('notifications')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <span class="badge">12</span>
+    </div>
+    <div class="admin-btn">
+      <div class="admin-avatar">A</div>
+      Admin
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </nav>
+
+  <!-- ==================== DASHBOARD PAGE ==================== -->
+  <div class="page active" id="page-dashboard">
+    <div class="content">
+      <!-- ROW 1 -->
+      <div class="row" style="grid-template-columns:1fr;">
+
+        <!-- Alerts + Notifs -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Aktiv Siqnallar <span class="card-badge">12</span>
+              </span>
+            </div>
+            <div class="panel-body">
+              <div class="alert-item"><div class="alert-icon red"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="alert-body"><div class="alert-title red">BK-04 Kritik Səviyyə</div><div class="alert-sub">Bakıxanov — 82% dolu</div></div><div class="alert-time">14:28</div></div>
+              <div class="alert-item"><div class="alert-icon red"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="alert-body"><div class="alert-title red">NR-07 Yüksək Risk</div><div class="alert-sub">Nərimanov — 75% dolu</div></div><div class="alert-time">14:15</div></div>
+              <div class="alert-item"><div class="alert-icon orange"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.5 19H9a7 7 0 110-14h.6A6 6 0 0122 10.5 5.5 5.5 0 0117.5 19z"/></svg></div><div class="alert-body"><div class="alert-title orange">Hava Xəbərdarlığı</div><div class="alert-sub">22:00-23:00 — yağış 80%</div></div><div class="alert-time">13:55</div></div>
+              <div class="alert-item"><div class="alert-icon yellow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="alert-body"><div class="alert-title yellow">BD-11 Diqqət</div><div class="alert-sub">Binəqədi — 55% dolu</div></div><div class="alert-time">13:40</div></div>
+            </div>
+            <div class="card-footer"><a class="link-more" onclick="navigateTo('signals')">Hamısına bax →</a></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                Bildirişlər
+              </span>
+            </div>
+            <div class="panel-body">
+              <div class="notif-item"><div class="notif-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="notif-text">YH-02 sensoru normal səviyyəyə qayıtdı</div><div class="notif-time">14:20</div></div>
+              <div class="notif-item"><div class="notif-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="notif-text">XB-09 texniki yoxlama tamamlandı</div><div class="notif-time">13:50</div></div>
+              <div class="notif-item"><div class="notif-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="notif-text">Günlük hesabat hazırlandı</div><div class="notif-time">12:00</div></div>
+              <div class="notif-item"><div class="notif-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="notif-text">5 yeni sensor əlavə edildi</div><div class="notif-time">10:30</div></div>
+            </div>
+            <div class="card-footer"><a class="link-more" onclick="navigateTo('notifications')">Hamısına bax →</a></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2 -->
+      <div class="row row-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Kanalizasiya Səviyyəsi Qrafiki</span>
+            <select class="card-dropdown"><option>Son 24 saat</option><option>Son 7 gün</option><option>Son 30 gün</option></select>
+          </div>
+          <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Risk Proqnozu</span>
+            <select class="card-dropdown"><option>Növbəti 24 saat</option><option>Növbəti 48 saat</option></select>
+          </div>
+          <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Proqnoz Xəbərdarlıq</span>
+          </div>
+          <div class="forecast-warn">
+            <div class="warn-card">
+              <div class="warn-card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Yüksək risk proqnozu!</div>
+              <div class="warn-text">Bu gecə <strong style="color:#fbbf24">22:00–23:00</strong> arasında yağış ehtimalı <strong style="color:#f97316">80%</strong> təşkil edir. BK-04, NR-07 sensorları kritik həddə yaxındır.</div>
+            </div>
+            <div class="warn-rec"><strong>Tövsiyə:</strong> Bakıxanov və Nərimanov rayonlarında nasoların güc rejimini artırın. Sahə qruplarını xəbərdar edin.</div>
+            <a class="link-more" onclick="navigateTo('forecasts')">Ətraflı proqnoza bax →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3 -->
+      <div class="row row-3">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>Sensorlar</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Yerləşmə</th><th>Kanalizasiya Səviyyəsi</th><th>Ümumi Risk</th><th>Son Yenilənmə</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><span class="sensor-id">BK-04</span></td><td><span class="sensor-loc">Bakıxanov qəs.</span></td><td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill pb-red" style="width:82%"></div></div><span class="pct-red">82%</span></div></td><td><span class="risk-badge risk-red">80% Yüksək</span></td><td style="color:var(--text-muted)">14:28</td><td><div class="status-online"><div class="dot"></div>Online</div></td></tr>
+                <tr><td><span class="sensor-id">NR-07</span></td><td><span class="sensor-loc">Nərimanov r-nu</span></td><td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill pb-red" style="width:75%"></div></div><span class="pct-red">75%</span></div></td><td><span class="risk-badge risk-red">73% Yüksək</span></td><td style="color:var(--text-muted)">14:25</td><td><div class="status-online"><div class="dot"></div>Online</div></td></tr>
+                <tr><td><span class="sensor-id">BD-11</span></td><td><span class="sensor-loc">Binəqədi r-nu</span></td><td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill pb-yellow" style="width:55%"></div></div><span class="pct-yellow">55%</span></div></td><td><span class="risk-badge risk-yellow">57% Orta</span></td><td style="color:var(--text-muted)">14:22</td><td><div class="status-online"><div class="dot"></div>Online</div></td></tr>
+                <tr><td><span class="sensor-id">YH-02</span></td><td><span class="sensor-loc">Yasamal r-nu</span></td><td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill pb-blue" style="width:35%"></div></div><span class="pct-blue">35%</span></div></td><td><span class="risk-badge risk-blue">30% Aşağı</span></td><td style="color:var(--text-muted)">14:20</td><td><div class="status-online"><div class="dot"></div>Online</div></td></tr>
+                <tr><td><span class="sensor-id">XB-09</span></td><td><span class="sensor-loc">Xətai r-nu</span></td><td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill pb-blue" style="width:28%"></div></div><span class="pct-blue">28%</span></div></td><td><span class="risk-badge risk-blue">27% Aşağı</span></td><td style="color:var(--text-muted)">14:18</td><td><div class="status-online"><div class="dot"></div>Online</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-footer"><a class="link-more" onclick="navigateTo('sensors')">Hamısına bax →</a></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2"><path d="M17.5 19H9a7 7 0 110-14c.2 0 .4 0 .6.02A5.99 5.99 0 0122 10.5a5.5 5.5 0 01-4.5 8.5z"/></svg>Hava Məlumatı</span></div>
+            <div class="weather-body">
+              <div class="weather-main"><div class="weather-icon-big"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.5 19H9a7 7 0 110-14c.2 0 .4 0 .6.02A5.99 5.99 0 0122 10.5a5.5 5.5 0 01-4.5 8.5z"/><line x1="9" y1="19" x2="9" y2="21" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="22" stroke-linecap="round"/><line x1="15" y1="19" x2="15" y2="21" stroke-linecap="round"/></svg></div><div><div class="weather-temp">18°C</div><div class="weather-desc">Yüngül yağış</div></div></div>
+              <div class="weather-stats">
+                <div class="weather-stat"><div class="weather-stat-val">72%</div><div class="weather-stat-label">Rütubat</div></div>
+                <div class="weather-stat"><div class="weather-stat-val">18 km/s</div><div class="weather-stat-label">Külək</div></div>
+                <div class="weather-stat"><div class="weather-stat-val" style="color:#f97316">80%</div><div class="weather-stat-label">Yağış ehtimalı</div></div>
+              </div>
+              <a class="link-more" onclick="navigateTo('forecasts')">Daha ətraflı →</a>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Tez Əməliyyatlar</span></div>
+            <div class="quick-body">
+              <div class="quick-grid">
+                <button class="quick-btn" onclick="navigateTo('reports')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Hesabat Yarat</button>
+                <button class="quick-btn" onclick="navigateTo('notifications')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.72 6.72l1.28-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Bildiriş Göndər</button>
+                <button class="quick-btn" onclick="navigateTo('sensors')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>Sensor Əlavə Et</button>
+                <button class="quick-btn" onclick="navigateTo('devices')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Nasos Yerləşdir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== KANALIZASIYA MAP PAGE ==================== -->
+  <div class="page" id="page-kanalizasiya-map">
+    <div class="page-header">
+      <div><div class="page-header-title">Kanalizasiya Xəritəsi</div><div class="page-header-sub">Bütün sensorların canlı görünüşü</div></div>
+      <div class="page-header-actions">
+        <select class="card-dropdown">
+          <option>Bütün Sensorlar</option><option>Yüksək Risk</option><option>Orta Risk</option><option>Aşağı Risk</option>
+        </select>
+        <button class="btn btn-primary" style="display:flex;align-items:center;gap:6px;font-size:12px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          Yenilə
+        </button>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;">
+        <div class="card" style="overflow:hidden;">
+          <div style="height:calc(100vh - 200px);min-height:500px;"><div id="map-kanaliz-full" style="width:100%;height:100%;"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Ümumi Statistika</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#162032;border-radius:8px;">
+                <span style="font-size:12px;color:var(--text-muted);">Ümumi sensorlar</span>
+                <span style="font-size:18px;font-weight:700;color:var(--text);">128</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;">
+                <span style="font-size:12px;color:var(--green);">Online</span>
+                <span style="font-size:18px;font-weight:700;color:var(--green);">128</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;">
+                <span style="font-size:12px;color:#60a5fa;">Aşağı Risk (&lt;40%)</span>
+                <span style="font-size:18px;font-weight:700;color:#60a5fa;">28</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;">
+                <span style="font-size:12px;color:var(--yellow);">Orta Risk (40-70%)</span>
+                <span style="font-size:18px;font-weight:700;color:var(--yellow);">37</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;">
+                <span style="font-size:12px;color:var(--red);">Yüksək Risk (&gt;70%)</span>
+                <span style="font-size:18px;font-weight:700;color:var(--red);">23</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Kritik Sensorlar</span></div>
+            <div class="panel-body">
+              <div class="alert-item"><div class="alert-icon red"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">BK-04</div><div class="alert-sub">82% dolu</div></div></div>
+              <div class="alert-item"><div class="alert-icon red"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">SR-06</div><div class="alert-sub">71% dolu</div></div></div>
+              <div class="alert-item"><div class="alert-icon red"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">NR-07</div><div class="alert-sub">75% dolu</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HAVA RISK MAP PAGE ==================== -->
+  <div class="page" id="page-hava-risk-map">
+    <div class="page-header">
+      <div><div class="page-header-title">Hava Risk Xəritəsi</div><div class="page-header-sub">Hava şəraiti əsasında risk qiymətləndirməsi</div></div>
+      <div class="page-header-actions">
+        <select class="card-dropdown"><option>Cari Risk</option><option>24 Saatlıq Proqnoz</option><option>48 Saatlıq Proqnoz</option></select>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div class="stat-cards" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card"><div class="stat-card-label">Orta Risk İndeksi</div><div class="stat-card-val" style="color:#f59e0b;">62%</div><div class="stat-card-trend trend-up">↑ +8% son saatda</div></div>
+        <div class="stat-card"><div class="stat-card-label">Yüksək Risk Bölgəsi</div><div class="stat-card-val" style="color:#ef4444;">24</div><div class="stat-card-sub">bölgə izlənilir</div></div>
+        <div class="stat-card"><div class="stat-card-label">Yağış Ehtimalı</div><div class="stat-card-val" style="color:#3b82f6;">80%</div><div class="stat-card-sub">bu gecə 22:00-23:00</div></div>
+        <div class="stat-card"><div class="stat-card-label">Külək Sürəti</div><div class="stat-card-val" style="color:#22c55e;">18 km/s</div><div class="stat-card-sub">Şimal-Qərb istiqaməti</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;">
+        <div class="card"><div style="height:480px;"><div id="map-hava-full" style="width:100%;height:100%;"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Hava Proqnozu</span></div>
+            <div style="padding:14px;">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#162032;border-radius:8px;">
+                  <div><div style="font-size:12px;font-weight:600;">Bu gecə</div><div style="font-size:11px;color:var(--text-muted);">22:00 - 00:00</div></div>
+                  <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#60a5fa;">🌧 Yağış</div><div style="font-size:11px;color:var(--orange);">Risk: 80%</div></div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#162032;border-radius:8px;">
+                  <div><div style="font-size:12px;font-weight:600;">Sabah</div><div style="font-size:11px;color:var(--text-muted);">06:00 - 18:00</div></div>
+                  <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#60a5fa;">⛅ Buludlu</div><div style="font-size:11px;color:var(--yellow);">Risk: 45%</div></div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:#162032;border-radius:8px;">
+                  <div><div style="font-size:12px;font-weight:600;">Birgünlük</div><div style="font-size:11px;color:var(--text-muted);">+2 gün</div></div>
+                  <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#22c55e;">☀️ Günəşli</div><div style="font-size:11px;color:var(--green);">Risk: 20%</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Risk Bölgələri</span></div>
+            <div class="panel-body">
+              <div class="alert-item"><div class="alert-icon red"></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">Bakıxanov</div><div class="alert-sub">Risk: 80% — Kritik</div></div></div>
+              <div class="alert-item"><div class="alert-icon red"></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">Suraxanı</div><div class="alert-sub">Risk: 78% — Kritik</div></div></div>
+              <div class="alert-item"><div class="alert-icon red"></div><div class="alert-body"><div class="alert-title red" style="font-size:11.5px;">Nərimanov</div><div class="alert-sub">Risk: 73% — Yüksək</div></div></div>
+              <div class="alert-item"><div class="alert-icon yellow"></div><div class="alert-body"><div class="alert-title yellow" style="font-size:11.5px;">Sabunçu</div><div class="alert-sub">Risk: 65% — Orta</div></div></div>
+              <div class="alert-item"><div class="alert-icon yellow"></div><div class="alert-body"><div class="alert-title yellow" style="font-size:11.5px;">Nəsimi</div><div class="alert-sub">Risk: 61% — Orta</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SIGNALS PAGE ==================== -->
+  <div class="page" id="page-signals">
+    <div class="page-header">
+      <div><div class="page-header-title">Siqnallar</div><div class="page-header-sub">12 aktiv, 8 işlənməkdə, 144 həll edilmiş</div></div>
+      <div class="page-header-actions">
+        <div class="signal-tabs">
+          <button class="signal-tab active">Hamısı (164)</button>
+          <button class="signal-tab">Aktiv (12)</button>
+          <button class="signal-tab">İşlənir (8)</button>
+          <button class="signal-tab">Həll edilib (144)</button>
+        </div>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div style="display:flex;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+        <div class="sensor-filters">
+          <button class="filter-btn active">Hamısı</button>
+          <button class="filter-btn">Kritik</button>
+          <button class="filter-btn">Yüksək</button>
+          <button class="filter-btn">Orta</button>
+          <button class="filter-btn">Aşağı</button>
+          <button class="filter-btn">Hava</button>
+          <button class="filter-btn">Sensor</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="signals-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NOTIFICATIONS PAGE ==================== -->
+  <div class="page" id="page-notifications">
+    <div class="page-header">
+      <div><div class="page-header-title">Bildirişlər</div><div class="page-header-sub">Sistem bildirişləri və yeniləmələri</div></div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" style="font-size:12px;">Hamısını oxunmuş et</button>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
+        <div class="card">
+          <div id="notif-list"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Bildiriş Statistikası</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#162032;border-radius:7px;"><span style="font-size:12px;color:var(--text-muted);">Bu gün</span><span style="font-weight:700;color:var(--text);">24</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#162032;border-radius:7px;"><span style="font-size:12px;color:var(--text-muted);">Bu həftə</span><span style="font-weight:700;color:var(--text);">167</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:#162032;border-radius:7px;"><span style="font-size:12px;color:var(--text-muted);">Bu ay</span><span style="font-weight:700;color:var(--text);">612</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:7px;"><span style="font-size:12px;color:var(--green);">Sistem Xəbərdarlıqları</span><span style="font-weight:700;color:var(--green);">48</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:7px;"><span style="font-size:12px;color:#60a5fa;">Texniki Bildirişlər</span><span style="font-weight:700;color:#60a5fa;">89</span></div>
+              <div style="display:flex;justify-content:space-between;padding:9px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:7px;"><span style="font-size:12px;color:var(--yellow);">Risk Xəbərdarlıqları</span><span style="font-weight:700;color:var(--yellow);">36</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Bildiriş Kanalları</span></div>
+            <div style="padding:14px;">
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">E-poçt</div><div class="toggle-desc">admin@su-monitor.az</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">SMS</div><div class="toggle-desc">+994 50 xxx xx xx</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Push Bildiriş</div><div class="toggle-desc">Mobil tətbiq</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ANALYTICS PAGE ==================== -->
+  <div class="page" id="page-analytics">
+    <div class="page-header">
+      <div><div class="page-header-title">Analitika</div><div class="page-header-sub">Sistem performansı və trend analizi</div></div>
+      <div class="page-header-actions">
+        <select class="card-dropdown"><option>Son 7 gün</option><option>Son 30 gün</option><option>Son 3 ay</option></select>
+        <button class="btn btn-primary" style="font-size:12px;">İxrac Et</button>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div class="analitika-kpi">
+        <div class="kpi-card"><div class="kpi-val" style="color:#ef4444;">88</div><div class="kpi-label">Kritik Siqnal</div><div class="kpi-change trend-up">↑ +12 bu həftə</div></div>
+        <div class="kpi-card"><div class="kpi-val" style="color:#f59e0b;">234</div><div class="kpi-label">Orta Risk Hadisəsi</div><div class="kpi-change trend-down">↓ -8 bu həftə</div></div>
+        <div class="kpi-card"><div class="kpi-val" style="color:#22c55e;">1,247</div><div class="kpi-label">Həll Edilmiş Siqnal</div><div class="kpi-change trend-down">↓ +47 bu həftə</div></div>
+        <div class="kpi-card"><div class="kpi-val" style="color:#3b82f6;">99.8%</div><div class="kpi-label">Sistem Aktivliyi</div><div class="kpi-change" style="color:var(--text-muted);">→ Stabil</div></div>
+        <div class="kpi-card"><div class="kpi-val" style="color:#a78bfa;">18 dəq</div><div class="kpi-label">Orta Reaksiya Vaxtı</div><div class="kpi-change trend-down">↓ -3 dəq yaxşılaşdı</div></div>
+        <div class="kpi-card"><div class="kpi-val" style="color:#f97316;">128</div><div class="kpi-label">Aktiv Sensor</div><div class="kpi-change" style="color:var(--text-muted);">→ Hamısı Online</div></div>
+      </div>
+      <div class="analytics-grid">
+        <div class="card"><div class="card-header"><span class="card-title">Haftalıq Risk Trendi</span><select class="card-dropdown"><option>Bütün Bölgələr</option><option>Bakıxanov</option><option>Nərimanov</option></select></div><div class="chart-wrap"><canvas id="chart-weekly"></canvas></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Siqnal Növü Paylanması</span></div><div class="chart-wrap"><canvas id="chart-pie"></canvas></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Sensor Performansı</span></div><div class="chart-wrap"><canvas id="chart-bar"></canvas></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Aylıq Karşılaştırma</span></div><div class="chart-wrap"><canvas id="chart-compare"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FORECASTS PAGE ==================== -->
+  <div class="page" id="page-forecasts">
+    <div class="page-header">
+      <div><div class="page-header-title">Proqnozlar</div><div class="page-header-sub">Hava və risk proqnozları — növbəti 7 gün</div></div>
+      <div class="page-header-actions"><select class="card-dropdown"><option>Bakı</option><option>Sumqayıt</option><option>Abşeron</option></select></div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div class="card">
+        <div class="card-header"><span class="card-title">7 Günlük Hava Proqnozu</span></div>
+        <div style="padding:16px;">
+          <div class="forecast-days">
+            <div class="forecast-day-card"><div class="forecast-day-name">Bazar</div><div class="forecast-day-icon">🌧</div><div class="forecast-day-temp">16°C</div><div class="forecast-day-rain">Yağış 80%</div><div class="forecast-day-risk risk-red" style="background:rgba(239,68,68,0.15);color:var(--red);">Yüksək</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">B.ertəsi</div><div class="forecast-day-icon">⛅</div><div class="forecast-day-temp">19°C</div><div class="forecast-day-rain">Yağış 35%</div><div class="forecast-day-risk risk-yellow" style="background:rgba(245,158,11,0.15);color:var(--yellow);">Orta</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">Çərşənbə</div><div class="forecast-day-icon">☀️</div><div class="forecast-day-temp">22°C</div><div class="forecast-day-rain">Yağış 5%</div><div class="forecast-day-risk risk-green" style="background:rgba(34,197,94,0.15);color:var(--green);">Aşağı</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">C.axşamı</div><div class="forecast-day-icon">☀️</div><div class="forecast-day-temp">24°C</div><div class="forecast-day-rain">Yağış 3%</div><div class="forecast-day-risk risk-green" style="background:rgba(34,197,94,0.15);color:var(--green);">Aşağı</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">Cümə</div><div class="forecast-day-icon">⛅</div><div class="forecast-day-temp">21°C</div><div class="forecast-day-rain">Yağış 20%</div><div class="forecast-day-risk risk-yellow" style="background:rgba(245,158,11,0.15);color:var(--yellow);">Orta</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">Şənbə</div><div class="forecast-day-icon">🌦</div><div class="forecast-day-temp">18°C</div><div class="forecast-day-rain">Yağış 55%</div><div class="forecast-day-risk risk-yellow" style="background:rgba(245,158,11,0.15);color:var(--yellow);">Orta</div></div>
+            <div class="forecast-day-card"><div class="forecast-day-name">Bazar</div><div class="forecast-day-icon">☀️</div><div class="forecast-day-temp">23°C</div><div class="forecast-day-rain">Yağış 8%</div><div class="forecast-day-risk risk-green" style="background:rgba(34,197,94,0.15);color:var(--green);">Aşağı</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="forecast-grid">
+        <div class="card"><div class="card-header"><span class="card-title">Risk Proqnozu — 48 Saat</span></div><div class="chart-wrap"><canvas id="chart-forecast48"></canvas></div></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Proqnoz Xəbərdarlıqları</span></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            <div class="warn-card"><div class="warn-card-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>Bu gecə 22:00-23:00</div><div class="warn-text">Güclü yağış ehtimalı 80%. BK-04 və NR-07 kritik həddə.</div></div>
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:9px;padding:12px;"><div style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--yellow);margin-bottom:6px;font-size:12.5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Şənbə günü</div><div class="warn-text">Orta yağış ehtimalı 55%. Ehtiyatlılıq tövsiyə edilir.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== REPORTS PAGE ==================== -->
+  <div class="page" id="page-reports">
+    <div class="page-header">
+      <div><div class="page-header-title">Hesabatlar</div><div class="page-header-sub">Sistem hesabatları — yükləmə və idarəetmə</div></div>
+      <div class="page-header-actions"><button class="btn btn-primary" style="font-size:12px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Yeni Hesabat</button></div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;">
+        <div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Son Hesabatlar</span></div>
+            <div class="report-list" id="report-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Avtomatik Hesabatlar</span></div>
+            <div style="padding:14px;">
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Günlük Hesabat</div><div class="toggle-desc">Hər gün saat 08:00-da göndərilir</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Həftəlik Hesabat</div><div class="toggle-desc">Hər Bazar ertəsi 09:00</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Aylıq Hesabat</div><div class="toggle-desc">Hər ayın 1-i</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Risk Hesabatı</div><div class="toggle-desc">Risk yüksək olduqda avtomatik</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card"><div class="card-header"><span class="card-title">Hesabat Növləri</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+              <button class="quick-btn" style="flex-direction:row;justify-content:flex-start;padding:10px 12px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>Kanalizasiya Hesabatı</button>
+              <button class="quick-btn" style="flex-direction:row;justify-content:flex-start;padding:10px 12px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 110-14h.6A6 6 0 0122 10.5 5.5 5.5 0 0117.5 19z"/></svg>Hava Risk Hesabatı</button>
+              <button class="quick-btn" style="flex-direction:row;justify-content:flex-start;padding:10px 12px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4"/></svg>Sensor Performans Hesabatı</button>
+              <button class="quick-btn" style="flex-direction:row;justify-content:flex-start;padding:10px 12px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analitik Hesabat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SENSORS PAGE ==================== -->
+  <div class="page" id="page-sensors">
+    <div class="page-header">
+      <div><div class="page-header-title">Sensorlar</div><div class="page-header-sub">128 sensor — hamısı aktiv</div></div>
+      <div class="page-header-actions">
+        <input type="text" class="form-input" placeholder="Sensor axtar..." style="width:200px;padding:7px 12px;">
+        <button class="btn btn-primary" style="font-size:12px;white-space:nowrap;">+ Sensor Əlavə Et</button>
+      </div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div style="margin-bottom:12px;"><div class="sensor-filters"><button class="filter-btn active">Hamısı (128)</button><button class="filter-btn">Kritik (23)</button><button class="filter-btn">Orta Risk (37)</button><button class="filter-btn">Normal (68)</button><button class="filter-btn">Offline (0)</button></div></div>
+      <div class="stat-cards" style="grid-template-columns:repeat(5,1fr);margin-bottom:4px;">
+        <div class="stat-card"><div class="stat-card-label">Ümumi Sensorlar</div><div class="stat-card-val" style="color:#60a5fa;">128</div></div>
+        <div class="stat-card"><div class="stat-card-label">Online</div><div class="stat-card-val" style="color:#22c55e;">128</div></div>
+        <div class="stat-card"><div class="stat-card-label">Kritik Həddə</div><div class="stat-card-val" style="color:#ef4444;">23</div></div>
+        <div class="stat-card"><div class="stat-card-label">Orta Risk</div><div class="stat-card-val" style="color:#f59e0b;">37</div></div>
+        <div class="stat-card"><div class="stat-card-label">Normal</div><div class="stat-card-val" style="color:#94a3b8;">68</div></div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Yerləşmə</th><th>Koordinatlar</th><th>Kanalizasiya Səviyyəsi</th><th>Ümumi Risk</th><th>Temp.</th><th>Son Yenilənmə</th><th>Status</th><th>Əməliyyat</th></tr></thead>
+            <tbody id="sensors-table-body"></tbody>
+          </table>
+        </div>
+        <div class="card-footer"><span style="font-size:11.5px;color:var(--text-muted);">128 sensordan 20-si göstərilir</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DEVICES PAGE ==================== -->
+  <div class="page" id="page-devices">
+    <div class="page-header">
+      <div><div class="page-header-title">Qurğular</div><div class="page-header-sub">Pompa stansiyaları, nəzarət panelləri, kommunikasiya qurğuları</div></div>
+      <div class="page-header-actions"><button class="btn btn-primary" style="font-size:12px;">+ Qurğu Əlavə Et</button></div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div class="stat-cards" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card"><div class="stat-card-label">Pompa Stansiyaları</div><div class="stat-card-val" style="color:#60a5fa;">18</div><div class="stat-card-sub">16 aktiv, 2 texniki</div></div>
+        <div class="stat-card"><div class="stat-card-label">Nəzarət Panelləri</div><div class="stat-card-val" style="color:#22c55e;">24</div><div class="stat-card-sub">Hamısı aktiv</div></div>
+        <div class="stat-card"><div class="stat-card-label">Kommunikasiya Modulları</div><div class="stat-card-val" style="color:#a78bfa;">86</div><div class="stat-card-sub">84 online</div></div>
+        <div class="stat-card"><div class="stat-card-label">Texniki Xidmət</div><div class="stat-card-val" style="color:#f59e0b;">4</div><div class="stat-card-sub">Planlaşdırılmış</div></div>
+      </div>
+      <div class="devices-grid" id="devices-grid"></div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS PAGE ==================== -->
+  <div class="page" id="page-settings">
+    <div class="page-header">
+      <div><div class="page-header-title">Parametrlər</div><div class="page-header-sub">Sistem konfiqurasiyası və idarəetmə</div></div>
+      <div class="page-header-actions"><button class="btn btn-primary" style="font-size:12px;">Saxla</button></div>
+    </div>
+    <div class="content" style="padding-top:14px;">
+      <div class="settings-grid">
+        <div class="card" style="height:fit-content;">
+          <div style="padding:8px;">
+            <div class="settings-menu">
+              <button class="settings-menu-item active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Ümumi</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>Bildirişlər</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4"/></svg>Sensor Hədləri</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>İnterfeys</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Təhlükəsizlik</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>API & İnteqrasiya</button>
+              <button class="settings-menu-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Yedəkləmə</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card"><div class="card-header"><span class="card-title">Ümumi Parametrlər</span></div>
+            <div style="padding:16px;">
+              <div class="form-group"><label class="form-label">Sistem Adı</label><input type="text" class="form-input" value="Su Monitorinq Sistemi"></div>
+              <div class="form-group"><label class="form-label">Zaman Zolağı</label><select class="form-select"><option>Bakı (UTC+4)</option><option>Moskva (UTC+3)</option><option>London (UTC+0)</option></select></div>
+              <div class="form-group"><label class="form-label">Dil</label><select class="form-select"><option>Azərbaycan dili</option><option>Русский</option><option>English</option></select></div>
+              <div class="form-group"><label class="form-label">Yeniləmə Intervalı</label><select class="form-select"><option>30 saniyə</option><option>1 dəqiqə</option><option>5 dəqiqə</option></select></div>
+              <button class="btn btn-primary">Yadda Saxla</button>
+            </div>
+          </div>
+          <div class="card"><div class="card-header"><span class="card-title">Bildiriş Parametrləri</span></div>
+            <div style="padding:16px;">
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Kritik Siqnal Bildirişi</div><div class="toggle-desc">Sensor kritik həddə çatdıqda dərhal xəbərdar et</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Hava Risk Bildirişi</div><div class="toggle-desc">Yağış ehtimalı 70%-dən yüksək olduqda</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Sensor Offline Bildirişi</div><div class="toggle-desc">Sensor bağlantısı kəsildikdə</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-info"><div class="toggle-title">Günlük Xülasə</div><div class="toggle-desc">Hər gün saat 08:00-da</div></div><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+            </div>
+          </div>
+          <div class="card"><div class="card-header"><span class="card-title">Sensor Hədd Parametrləri</span></div>
+            <div style="padding:16px;">
+              <div class="form-group"><label class="form-label">Kritik Hədd (%)</label><input type="number" class="form-input" value="75"></div>
+              <div class="form-group"><label class="form-label">Yüksək Risk Hədd (%)</label><input type="number" class="form-input" value="60"></div>
+              <div class="form-group"><label class="form-label">Orta Risk Hədd (%)</label><input type="number" class="form-input" value="40"></div>
+              <div class="form-group"><label class="form-label">Hava Risk Hədd (%)</label><input type="number" class="form-input" value="70"></div>
+              <div style="display:flex;gap:10px;"><button class="btn btn-primary">Yadda Saxla</button><button class="btn btn-outline">Defolt Bərpa Et</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main-wrapper -->
+
+<script>
+// ======================== CLOCK ========================
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const el = document.getElementById('clock');
+  if (el) el.textContent = h+':'+m+':'+s;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ======================== NAVIGATION ========================
+const pageTitles = {
+  'dashboard': 'Ümumi İcmal',
+  'kanalizasiya-map': 'Kanalizasiya Xəritəsi',
+  'hava-risk-map': 'Hava Risk Xəritəsi',
+  'signals': 'Siqnallar',
+  'notifications': 'Bildirişlər',
+  'analytics': 'Analitika',
+  'forecasts': 'Proqnozlar',
+  'reports': 'Hesabatlar',
+  'sensors': 'Sensorlar',
+  'devices': 'Qurğular',
+  'settings': 'Parametrlər'
+};
+
+let currentPage = 'dashboard';
+let mapsInitialized = {};
+let chartsInitialized = {};
+
+function navigateTo(pageId) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Show target page
+  const target = document.getElementById('page-' + pageId);
+  if (target) target.classList.add('active');
+
+  // Update nav items
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+    if (item.dataset.page === pageId) item.classList.add('active');
+  });
+
+  // Update title
+  const titleEl = document.getElementById('navbar-title');
+  if (titleEl) titleEl.textContent = pageTitles[pageId] || 'Su Monitorinq Sistemi';
+
+  currentPage = pageId;
+
+  // Initialize page-specific content
+  setTimeout(() => {
+    if (pageId === 'dashboard' && !mapsInitialized['map1']) { initDashboardMaps(); initDashboardCharts(); }
+    if (pageId === 'kanalizasiya-map' && !mapsInitialized['map-kanaliz-full']) initKanalizasiyaMap();
+    if (pageId === 'hava-risk-map' && !mapsInitialized['map-hava-full']) initHavaRiskMap();
+    if (pageId === 'analytics' && !chartsInitialized['analytics']) initAnalyticsCharts();
+    if (pageId === 'forecasts' && !chartsInitialized['forecasts']) initForecastCharts();
+    if (pageId === 'signals') renderSignals();
+    if (pageId === 'notifications') renderNotifications();
+    if (pageId === 'reports') renderReports();
+    if (pageId === 'sensors') renderSensors();
+    if (pageId === 'devices') renderDevices();
+  }, 50);
+}
+
+// Nav item click handlers
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => navigateTo(item.dataset.page));
+});
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.closest('.sensor-filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Settings menu items
+document.querySelectorAll('.settings-menu-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.settings-menu-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Signal tabs
+document.querySelectorAll('.signal-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.signal-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ======================== MAP HELPERS ========================
+function addMapStyle() {
+  if (document.getElementById('map-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'map-styles';
+  s.textContent = `.leaflet-dark-tooltip{background:#1e293b!important;border:1px solid #334155!important;color:#e2e8f0!important;font-size:11px!important;padding:4px 8px!important;border-radius:5px!important;box-shadow:0 2px 8px rgba(0,0,0,.5)!important;font-family:Inter,sans-serif!important;}`;
+  document.head.appendChild(s);
+}
+
+function createMap(id, markers) {
+  addMapStyle();
+  const map = L.map(id, {
+    center: [40.4093, 49.8671],
+    zoom: 11,
+    zoomControl: true,
+    attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19, subdomains: 'abcd'
+  }).addTo(map);
+
+  markers.forEach(m => {
+    const color = m.val > 70 ? '#ef4444' : m.val > 40 ? '#f59e0b' : '#3b82f6';
+    const textColor = m.val > 70 ? '#fca5a5' : m.val > 40 ? '#fde68a' : '#93c5fd';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:40px;height:40px;background:${color}22;border:2px solid ${color};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:${textColor};font-family:Inter,sans-serif;box-shadow:0 0 10px ${color}55;">${m.val}%</div>`,
+      iconSize: [40, 40], iconAnchor: [20, 20]
+    });
+    L.marker([m.lat, m.lng], {icon})
+      .bindTooltip(`<b>${m.name}</b><br>${m.val}%`, {className:'leaflet-dark-tooltip',direction:'top',offset:[0,-24]})
+      .addTo(map);
+  });
+  return map;
+}
+
+const sensorMarkers = [
+  {lat:40.469,lng:49.9485,name:'BK-04 Bakıxanov',val:82},
+  {lat:40.3953,lng:49.8481,name:'NR-07 Nərimanov',val:75},
+  {lat:40.4373,lng:49.8070,name:'BD-11 Binəqədi',val:55},
+  {lat:40.3781,lng:49.8390,name:'YH-02 Yasamal',val:35},
+  {lat:40.3664,lng:49.9054,name:'XB-09 Xətai',val:28},
+  {lat:40.4230,lng:49.9200,name:'SB-14 Sabunçu',val:63},
+  {lat:40.3530,lng:49.8760,name:'LK-03 Lökbatan',val:42},
+  {lat:40.4010,lng:49.9640,name:'SR-06 Suraxanı',val:71},
+  {lat:40.3300,lng:49.8200,name:'GD-08 Günəşli',val:22},
+  {lat:40.4530,lng:49.8810,name:'AB-12 Abşeron',val:48},
+];
+
+const riskMarkers = [
+  {lat:40.469,lng:49.9485,name:'Bakıxanov',val:80},
+  {lat:40.3953,lng:49.8481,name:'Nərimanov',val:73},
+  {lat:40.4373,lng:49.8070,name:'Binəqədi',val:57},
+  {lat:40.3781,lng:49.8390,name:'Yasamal',val:30},
+  {lat:40.3664,lng:49.9054,name:'Xətai',val:27},
+  {lat:40.4230,lng:49.9200,name:'Sabunçu',val:65},
+  {lat:40.3530,lng:49.8760,name:'Lökbatan',val:44},
+  {lat:40.4010,lng:49.9640,name:'Suraxanı',val:78},
+  {lat:40.3300,lng:49.8200,name:'Günəşli',val:19},
+  {lat:40.4530,lng:49.8810,name:'Abşeron',val:52},
+  {lat:40.4080,lng:49.8230,name:'Səbail',val:38},
+  {lat:40.3870,lng:49.8550,name:'Nəsimi',val:61},
+];
+
+// ======================== DASHBOARD MAPS & CHARTS ========================
+function initDashboardMaps() {
+  if (document.getElementById('map1')) createMap('map1', sensorMarkers);
+  if (document.getElementById('map2')) createMap('map2', riskMarkers);
+  mapsInitialized['map1'] = true;
+}
+
+function makeChartOptions() {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    animation: {duration:1300,easing:'easeInOutQuart'},
+    interaction: {intersect:false,mode:'index'},
+    plugins: {
+      legend: {position:'top',labels:{color:'#94a3b8',font:{size:11,family:'Inter'},padding:14,boxWidth:28,boxHeight:2}},
+      tooltip: {backgroundColor:'#1e293b',borderColor:'#334155',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:10,cornerRadius:7,callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y+'%'}}
+    },
+    scales: {
+      x: {grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'},maxRotation:0,maxTicksLimit:13},border:{color:'#334155'}},
+      y: {grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'},callback:v=>v+'%'},border:{color:'#334155'},min:0,max:100}
+    }
+  };
+}
+
+function rndLine(base, amp, len, seed) {
+  const arr = []; let v = base;
+  for (let i=0;i<len;i++) {
+    const r = Math.sin(i*137.508+seed)*0.5+0.5;
+    v = Math.min(98,Math.max(5,v+(r-0.45)*amp));
+    arr.push(Math.round(v));
+  }
+  return arr;
+}
+
+function initDashboardCharts() {
+  if (chartsInitialized['dashboard']) return;
+  const labels1 = ['14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
+  const bk04 = rndLine(55,11,labels1.length-1,1); bk04.push(82);
+  const nr07 = rndLine(48,9,labels1.length-1,42); nr07.push(75);
+  const bd11 = rndLine(38,8,labels1.length-1,17); bd11.push(55);
+
+  new Chart(document.getElementById('chart1'), {type:'line',data:{labels:labels1,datasets:[
+    {label:'BK-04',data:bk04,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.07)',borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0.38,fill:false},
+    {label:'NR-07',data:nr07,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0.38,fill:false},
+    {label:'BD-11',data:bd11,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0.38,fill:false}
+  ]},options:makeChartOptions()});
+
+  const labels2 = ['14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00','02:00'];
+  const opts2 = makeChartOptions();
+  new Chart(document.getElementById('chart2'), {type:'line',data:{labels:labels2,datasets:[
+    {label:'Cari Risk',data:[58,61,65,68,70,73,74,76,80,null,null,null,null],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',borderWidth:2.5,pointRadius:0,tension:0.35,fill:true,spanGaps:false},
+    {label:'Proqnoz',data:[null,null,null,null,null,null,null,null,80,85,88,83,76],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.08)',borderWidth:2.5,borderDash:[7,4],pointRadius:0,tension:0.35,fill:true,spanGaps:false}
+  ]},options:opts2});
+
+  chartsInitialized['dashboard'] = true;
+}
+
+// ======================== KANALIZASIYA MAP ========================
+function initKanalizasiyaMap() {
+  const allMarkers = [...sensorMarkers, ...riskMarkers.slice(10)];
+  createMap('map-kanaliz-full', sensorMarkers.concat([
+    {lat:40.4080,lng:49.8230,name:'SB-01 Səbail',val:38},
+    {lat:40.3870,lng:49.8550,name:'NS-05 Nəsimi',val:61},
+    {lat:40.4200,lng:49.8100,name:'BR-15 Binəqədi-2',val:72},
+    {lat:40.3500,lng:49.8900,name:'MK-10 Maştağa',val:44},
+    {lat:40.4700,lng:49.8400,name:'BB-13 Balaxanı',val:68}
+  ]));
+  mapsInitialized['map-kanaliz-full'] = true;
+}
+
+// ======================== HAVA RISK MAP ========================
+function initHavaRiskMap() {
+  const havaMarkers = riskMarkers.map(m => ({...m, val: Math.min(95, m.val + Math.floor(Math.random()*15))}));
+  createMap('map-hava-full', havaMarkers);
+  mapsInitialized['map-hava-full'] = true;
+}
+
+// ======================== SIGNALS ========================
+const signalsData = [
+  {id:'BK-04',loc:'Bakıxanov qəs.',type:'Kritik Səviyyə',detail:'Kanalizasiya 82% dolu — kritik hədd aşılıb',priority:'critical',time:'14:28',status:'active'},
+  {id:'NR-07',loc:'Nərimanov r-nu',type:'Yüksək Risk',detail:'Kanalizasiya 75% dolu — müdaxilə lazımdır',priority:'high',time:'14:15',status:'active'},
+  {id:'SR-06',loc:'Suraxanı r-nu',type:'Yüksək Hədd',detail:'Kanalizasiya 71% dolu',priority:'high',time:'14:10',status:'active'},
+  {id:'HAVA',loc:'Bütün şəhər',type:'Hava Xəbərdarlığı',detail:'Bu gecə 22:00-23:00 arası güclü yağış (80% ehtimal)',priority:'weather',time:'13:55',status:'active'},
+  {id:'BD-11',loc:'Binəqədi r-nu',type:'Diqqət Tələb Edir',detail:'Kanalizasiya 55% dolu — izlənilir',priority:'medium',time:'13:40',status:'active'},
+  {id:'SB-14',loc:'Sabunçu r-nu',type:'Orta Səviyyə',detail:'Kanalizasiya 63% dolu',priority:'medium',time:'13:20',status:'processing'},
+  {id:'BR-15',loc:'Binəqədi-2',type:'Yüksək Hədd',detail:'Kanalizasiya 72% dolu',priority:'high',time:'13:10',status:'processing'},
+  {id:'NS-05',loc:'Nəsimi r-nu',type:'Orta Səviyyə',detail:'Kanalizasiya 61% dolu',priority:'medium',time:'12:55',status:'processing'},
+  {id:'AB-12',loc:'Abşeron r-nu',type:'Sensor Kalibrasiyası',detail:'Sensor kalibrasyonu tələb olunur',priority:'low',time:'12:30',status:'processing'},
+  {id:'YH-02',loc:'Yasamal r-nu',type:'Həll Edildi',detail:'Normal səviyyəyə qayıtdı (35%)',priority:'resolved',time:'12:00',status:'resolved'},
+  {id:'XB-09',loc:'Xətai r-nu',type:'Həll Edildi',detail:'Texniki yoxlama tamamlandı',priority:'resolved',time:'11:45',status:'resolved'},
+  {id:'GD-08',loc:'Günəşli r-nu',type:'Həll Edildi',detail:'Normal səviyyə (22%)',priority:'resolved',time:'11:20',status:'resolved'},
+];
+
+function renderSignals() {
+  const list = document.getElementById('signals-list');
+  if (!list || list.children.length > 0) return;
+  signalsData.forEach(s => {
+    const colors = {critical:'#ef4444',high:'#f97316',weather:'#f59e0b',medium:'#3b82f6',low:'#94a3b8',resolved:'#22c55e'};
+    const col = colors[s.priority] || '#94a3b8';
+    const div = document.createElement('div');
+    div.className = 'signal-row';
+    div.innerHTML = `
+      <div class="signal-priority" style="background:${col}"></div>
+      <div class="alert-icon" style="background:${col}18;color:${col};width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+      </div>
+      <div class="signal-body">
+        <div class="signal-title"><span class="sensor-id">${s.id}</span> — ${s.type}</div>
+        <div class="signal-meta">${s.loc} • ${s.detail}</div>
+      </div>
+      <div class="signal-time">${s.time}</div>
+      <div class="signal-actions">
+        ${s.status !== 'resolved' ? `<button class="signal-action-btn resolve" onclick="resolveSignal(this)">Həll Et</button>` : `<span class="risk-badge risk-green" style="font-size:10px;">Həll Edilib</span>`}
+        <button class="signal-action-btn">Bax</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function resolveSignal(btn) {
+  const row = btn.closest('.signal-row');
+  row.style.transition = 'opacity 0.3s, transform 0.3s';
+  row.style.opacity = '0';
+  row.style.transform = 'translateX(20px)';
+  setTimeout(() => row.remove(), 300);
+}
+
+// ======================== NOTIFICATIONS ========================
+const notifsData = [
+  {icon:'✅',text:'YH-02 sensoru normal səviyyəyə qayıtdı (35%)',time:'14:20',type:'success'},
+  {icon:'🔧',text:'XB-09 texniki yoxlama tamamlandı',time:'13:50',type:'info'},
+  {icon:'📊',text:'Günlük hesabat hazırlandı və göndərildi',time:'12:00',type:'info'},
+  {icon:'➕',text:'5 yeni sensor sistemə əlavə edildi',time:'10:30',type:'info'},
+  {icon:'⚠️',text:'BK-04 sensoru yüksəlməyə davam edir',time:'10:15',type:'warning'},
+  {icon:'☔',text:'Hava proqnozu yeniləndi — yağış ehtimalı artdı',time:'09:45',type:'warning'},
+  {icon:'✅',text:'Sistem yedəkləməsi uğurla tamamlandı',time:'08:00',type:'success'},
+  {icon:'📡',text:'LK-03 sensoru yenidən onlayn oldu',time:'07:30',type:'success'},
+  {icon:'🔄',text:'Sistem yeniləməsi v2.4.1 quraşdırıldı',time:'Dünən 23:00',type:'info'},
+  {icon:'📈',text:'Həftəlik analitika hesabatı hazır',time:'Dünən 18:00',type:'info'},
+  {icon:'⚡',text:'NR-07 sensorunda sapma aşkarlandı',time:'Dünən 16:40',type:'warning'},
+  {icon:'✅',text:'Binəqədi kollektor xətti yoxlanıldı — normal',time:'Dünən 14:00',type:'success'},
+];
+
+function renderNotifications() {
+  const list = document.getElementById('notif-list');
+  if (!list || list.children.length > 0) return;
+  notifsData.forEach(n => {
+    const bgColors = {success:'rgba(34,197,94,0.1)',warning:'rgba(245,158,11,0.1)',info:'rgba(59,130,246,0.1)'};
+    const iconColors = {success:'#22c55e',warning:'#f59e0b',info:'#3b82f6'};
+    const div = document.createElement('div');
+    div.className = 'notif-item';
+    div.innerHTML = `
+      <div class="notif-check" style="background:${bgColors[n.type]};color:${iconColors[n.type]};font-size:12px;width:28px;height:28px;">${n.icon}</div>
+      <div class="notif-text">${n.text}</div>
+      <div class="notif-time">${n.time}</div>`;
+    list.appendChild(div);
+  });
+}
+
+// ======================== ANALYTICS CHARTS ========================
+function initAnalyticsCharts() {
+  if (chartsInitialized['analytics']) return;
+  const co = {
+    plugins:{
+      legend:{position:'top',labels:{color:'#94a3b8',font:{size:11,family:'Inter'},padding:12,boxWidth:22,boxHeight:2}},
+      tooltip:{backgroundColor:'#1e293b',borderColor:'#334155',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:8,cornerRadius:6}
+    },
+    scales:{
+      x:{grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'}},border:{color:'#334155'}},
+      y:{grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'}},border:{color:'#334155'}}
+    },
+    responsive:true,maintainAspectRatio:true
+  };
+
+  const days = ['B.e','Ç.a','Ç','C.a','C','Ş','B'];
+  new Chart(document.getElementById('chart-weekly'),{type:'line',data:{labels:days,datasets:[
+    {label:'Bakıxanov',data:[65,70,72,68,75,78,82],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.08)',borderWidth:2,pointRadius:3,tension:0.35,fill:true},
+    {label:'Nərimanov',data:[55,58,62,60,65,70,75],borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.05)',borderWidth:2,pointRadius:3,tension:0.35,fill:false},
+    {label:'Binəqədi',data:[38,40,42,45,48,52,55],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.05)',borderWidth:2,pointRadius:3,tension:0.35,fill:false}
+  ]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v+'%'},min:0,max:100}}}});
+
+  new Chart(document.getElementById('chart-pie'),{type:'doughnut',data:{labels:['Kritik','Yüksək','Orta','Aşağı','Hava'],datasets:[{data:[88,134,234,156,48],backgroundColor:['rgba(239,68,68,0.85)','rgba(249,115,22,0.85)','rgba(245,158,11,0.85)','rgba(59,130,246,0.85)','rgba(167,139,250,0.85)'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11,family:'Inter'},padding:10}},tooltip:{backgroundColor:'#1e293b',borderColor:'#334155',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8'}}}});
+
+  new Chart(document.getElementById('chart-bar'),{type:'bar',data:{labels:['BK-04','NR-07','SR-06','SB-14','BD-11','YH-02','XB-09'],datasets:[{label:'Ortalama Səviyyə (%)',data:[78,72,68,63,55,35,28],backgroundColor:['rgba(239,68,68,0.7)','rgba(239,68,68,0.7)','rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(245,158,11,0.7)','rgba(59,130,246,0.7)','rgba(59,130,246,0.7)'],borderRadius:5}]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v+'%'},min:0,max:100}}}});
+
+  const months = ['Yan','Fev','Mar','Apr','May','İyn','İyl','Avq','Sen','Okt','Noy','Dek'];
+  new Chart(document.getElementById('chart-compare'),{type:'line',data:{labels:months,datasets:[
+    {label:'2024',data:[45,48,52,55,58,62,65,68,63,60,57,55],borderColor:'#475569',borderWidth:1.5,pointRadius:2,borderDash:[4,3],tension:0.35,fill:false},
+    {label:'2025',data:[52,55,58,62,65,68,72,75,70,68,65,62],borderColor:'#3b82f6',borderWidth:2,pointRadius:2,tension:0.35,fill:false}
+  ]},options:{...co,scales:{...co.scales,y:{...co.scales.y,ticks:{...co.scales.y.ticks,callback:v=>v+'%'},min:0,max:100}}}});
+
+  chartsInitialized['analytics'] = true;
+}
+
+// ======================== FORECAST CHARTS ========================
+function initForecastCharts() {
+  if (chartsInitialized['forecasts']) return;
+  const co = {responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{position:'top',labels:{color:'#94a3b8',font:{size:11,family:'Inter'},padding:12,boxWidth:22,boxHeight:2}},tooltip:{backgroundColor:'#1e293b',borderColor:'#334155',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#94a3b8',padding:8,cornerRadius:6}},
+    scales:{x:{grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'}},border:{color:'#334155'}},y:{grid:{color:'#1e2a3a'},ticks:{color:'#475569',font:{size:10,family:'Inter'},callback:v=>v+'%'},border:{color:'#334155'},min:0,max:100}}
+  };
+  const hrs = ['14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00'];
+  const hist = [58,62,66,70,75,null,null,null,null,null,null,null,null];
+  const fcst = [null,null,null,null,75,82,88,85,78,70,65,60,58];
+  new Chart(document.getElementById('chart-forecast48'),{type:'line',data:{labels:hrs,datasets:[
+    {label:'Cari Risk',data:hist,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',borderWidth:2.5,pointRadius:0,tension:0.35,fill:true,spanGaps:false},
+    {label:'Proqnoz',data:fcst,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.08)',borderWidth:2.5,borderDash:[7,4],pointRadius:0,tension:0.35,fill:true,spanGaps:false}
+  ]},options:co});
+  chartsInitialized['forecasts'] = true;
+}
+
+// ======================== REPORTS ========================
+const reportsData = [
+  {name:'Günlük Hesabat — 2 May 2025',date:'02.05.2025 08:00',size:'1.4 MB',type:'PDF'},
+  {name:'Həftəlik Risk Analizi — 28 Apr-4 May',date:'04.05.2025 09:00',size:'3.2 MB',type:'PDF'},
+  {name:'BK-04 Kritik Sensor Hesabatı',date:'02.05.2025 14:30',size:'0.8 MB',type:'PDF'},
+  {name:'Hava Risk Xülasəsi — Aprel 2025',date:'01.05.2025 18:00',size:'2.1 MB',type:'PDF'},
+  {name:'Sensor Performans Hesabatı — Q1 2025',date:'01.04.2025 08:00',size:'4.5 MB',type:'XLSX'},
+  {name:'Aylıq Analitika — Mart 2025',date:'01.04.2025 09:00',size:'2.8 MB',type:'PDF'},
+  {name:'Qurğu Texniki Hesabat',date:'28.03.2025 16:00',size:'1.9 MB',type:'PDF'},
+];
+
+function renderReports() {
+  const list = document.getElementById('report-list');
+  if (!list || list.children.length > 0) return;
+  reportsData.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'report-item';
+    div.innerHTML = `
+      <div class="report-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="report-body"><div class="report-name">${r.name}</div><div class="report-meta">${r.date} • ${r.size} • ${r.type}</div></div>
+      <div class="report-actions">
+        <div class="icon-btn" title="Yüklə"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+        <div class="icon-btn" title="Gözat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="icon-btn" title="Sil" style="color:var(--red);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ======================== SENSORS TABLE ========================
+const sensorsFullData = [
+  {id:'BK-04',loc:'Bakıxanov qəs.',lat:'40.4690',lng:'49.9485',level:82,risk:80,riskLabel:'Yüksək',temp:'16°C',time:'14:28'},
+  {id:'NR-07',loc:'Nərimanov r-nu',lat:'40.3953',lng:'49.8481',level:75,risk:73,riskLabel:'Yüksək',temp:'17°C',time:'14:25'},
+  {id:'SR-06',loc:'Suraxanı r-nu',lat:'40.4010',lng:'49.9640',level:71,risk:75,riskLabel:'Yüksək',temp:'16°C',time:'14:22'},
+  {id:'BR-15',loc:'Binəqədi-2',lat:'40.4200',lng:'49.8100',level:72,risk:70,riskLabel:'Yüksək',temp:'18°C',time:'14:20'},
+  {id:'SB-14',loc:'Sabunçu r-nu',lat:'40.4230',lng:'49.9200',level:63,risk:65,riskLabel:'Orta',temp:'17°C',time:'14:18'},
+  {id:'NS-05',loc:'Nəsimi r-nu',lat:'40.3870',lng:'49.8550',level:61,risk:62,riskLabel:'Orta',temp:'18°C',time:'14:16'},
+  {id:'BD-11',loc:'Binəqədi r-nu',lat:'40.4373',lng:'49.8070',level:55,risk:57,riskLabel:'Orta',temp:'17°C',time:'14:14'},
+  {id:'AB-12',loc:'Abşeron r-nu',lat:'40.4530',lng:'49.8810',level:48,risk:52,riskLabel:'Orta',temp:'15°C',time:'14:12'},
+  {id:'LK-03',loc:'Lökbatan r-nu',lat:'40.3530',lng:'49.8760',level:42,risk:44,riskLabel:'Orta',temp:'16°C',time:'14:10'},
+  {id:'SB-01',loc:'Səbail r-nu',lat:'40.4080',lng:'49.8230',level:38,risk:38,riskLabel:'Aşağı',temp:'18°C',time:'14:08'},
+  {id:'BB-13',loc:'Balaxanı r-nu',lat:'40.4700',lng:'49.8400',level:68,risk:66,riskLabel:'Orta',temp:'16°C',time:'14:06'},
+  {id:'MK-10',loc:'Maştağa r-nu',lat:'40.3500',lng:'49.8900',level:44,risk:46,riskLabel:'Orta',temp:'15°C',time:'14:04'},
+  {id:'YH-02',loc:'Yasamal r-nu',lat:'40.3781',lng:'49.8390',level:35,risk:30,riskLabel:'Aşağı',temp:'18°C',time:'14:02'},
+  {id:'XB-09',loc:'Xətai r-nu',lat:'40.3664',lng:'49.9054',level:28,risk:27,riskLabel:'Aşağı',temp:'17°C',time:'14:00'},
+  {id:'GD-08',loc:'Günəşli r-nu',lat:'40.3300',lng:'49.8200',level:22,risk:19,riskLabel:'Aşağı',temp:'16°C',time:'13:58'},
+];
+
+function renderSensors() {
+  const tbody = document.getElementById('sensors-table-body');
+  if (!tbody || tbody.children.length > 0) return;
+  const rColors = {'Yüksək':'risk-red','Orta':'risk-yellow','Aşağı':'risk-blue'};
+  const pColors = {'Yüksək':'pb-red','Orta':'pb-yellow','Aşağı':'pb-blue'};
+  const tColors = {'Yüksək':'pct-red','Orta':'pct-yellow','Aşağı':'pct-blue'};
+  sensorsFullData.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="sensor-id">${s.id}</span></td>
+      <td><span class="sensor-loc">${s.loc}</span></td>
+      <td style="color:var(--text-muted);font-size:11px;font-family:monospace;">${s.lat}, ${s.lng}</td>
+      <td><div class="progress-wrap"><div class="progress-bar-bg"><div class="progress-bar-fill ${pColors[s.riskLabel]}" style="width:${s.level}%"></div></div><span class="${tColors[s.riskLabel]}">${s.level}%</span></div></td>
+      <td><span class="risk-badge ${rColors[s.riskLabel]}">${s.risk}% ${s.riskLabel}</span></td>
+      <td style="color:var(--text-muted);">${s.temp}</td>
+      <td style="color:var(--text-muted);">${s.time}</td>
+      <td><div class="status-online"><div class="dot"></div>Online</div></td>
+      <td>
+        <div style="display:flex;gap:5px;">
+          <div class="icon-btn" title="Bax"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="icon-btn" title="Düzəliş et"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ======================== DEVICES ========================
+const devicesData = [
+  {name:'Pompa Stansiyası PS-01',type:'Pompa Stansiyası',loc:'Bakıxanov',status:'active',power:'87%',flow:'340 m³/saat',pressure:'4.2 bar',uptime:'99.2%'},
+  {name:'Pompa Stansiyası PS-02',type:'Pompa Stansiyası',loc:'Nərimanov',status:'active',power:'72%',flow:'280 m³/saat',pressure:'3.8 bar',uptime:'98.7%'},
+  {name:'Pompa Stansiyası PS-03',type:'Pompa Stansiyası',loc:'Suraxanı',status:'maintenance',power:'—',flow:'Dayandırılıb',pressure:'—',uptime:'95.1%'},
+  {name:'Nəzarət Paneli CP-01',type:'Nəzarət Paneli',loc:'Mərkəz',status:'active',power:'100%',flow:'—',pressure:'—',uptime:'100%'},
+  {name:'Nəzarət Paneli CP-02',type:'Nəzarət Paneli',loc:'Sabunçu',status:'active',power:'100%',flow:'—',pressure:'—',uptime:'99.8%'},
+  {name:'Kommunikasiya Modulu CM-01',type:'Komunikasiya',loc:'Binəqədi',status:'active',power:'60%',flow:'—',pressure:'—',uptime:'98.4%'},
+  {name:'Pompa Stansiyası PS-04',type:'Pompa Stansiyası',loc:'Binəqədi',status:'active',power:'65%',flow:'220 m³/saat',pressure:'3.5 bar',uptime:'97.9%'},
+  {name:'Pompa Stansiyası PS-05',type:'Pompa Stansiyası',loc:'Günəşli',status:'active',power:'40%',flow:'150 m³/saat',pressure:'2.8 bar',uptime:'99.5%'},
+  {name:'Kommunikasiya Modulu CM-02',type:'Komunikasiya',loc:'Xətai',status:'active',power:'55%',flow:'—',pressure:'—',uptime:'97.2%'},
+];
+
+function renderDevices() {
+  const grid = document.getElementById('devices-grid');
+  if (!grid || grid.children.length > 0) return;
+  devicesData.forEach(d => {
+    const statusColor = d.status === 'active' ? 'var(--green)' : 'var(--yellow)';
+    const statusText = d.status === 'active' ? 'Aktiv' : 'Texniki Xidmət';
+    const div = document.createElement('div');
+    div.className = 'device-card';
+    div.innerHTML = `
+      <div class="device-header">
+        <div>
+          <div class="device-name">${d.name}</div>
+          <div class="device-type">${d.type} • ${d.loc}</div>
+        </div>
+        <span class="risk-badge" style="background:${statusColor}18;color:${statusColor};font-size:10px;">${statusText}</span>
+      </div>
+      <div class="device-stats">
+        <div class="device-stat"><div class="device-stat-val">${d.power}</div><div class="device-stat-label">Güc</div></div>
+        <div class="device-stat"><div class="device-stat-val" style="font-size:12px;">${d.flow}</div><div class="device-stat-label">Axın</div></div>
+        <div class="device-stat"><div class="device-stat-val">${d.pressure}</div><div class="device-stat-label">Təzyiq</div></div>
+        <div class="device-stat"><div class="device-stat-val" style="color:var(--green);">${d.uptime}</div><div class="device-stat-label">Uptime</div></div>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+// ======================== INIT ========================
+window.addEventListener('load', () => {
+  initDashboardMaps();
+  // force chart-wrap height before Chart.js reads it
+  document.querySelectorAll('.chart-wrap').forEach(el => {
+    el.style.height = '220px';
+  });
+  setTimeout(initDashboardCharts, 100);
+});
+</script>
+</body>
+</html>
